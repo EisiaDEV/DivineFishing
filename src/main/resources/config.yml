@@ -1,0 +1,45 @@
+minigame:
+  duration: 3.0
+  update-interval: 0.1
+
+messages:
+  invalid-rod: "&a[ &e시스템 &a] &c올바른 낚싯대가 아닙니다!"
+  fishing-failed: "&a[ &e시스템 &a] &c낚시에 실패하였습니다."
+
+sounds:
+  cursor-move-water:
+    - sound: "block.note_block.hat"
+      volume: 1.0
+      pitch: 2.0
+    - sound: "entity.player.splash"
+      volume: 0.5
+      pitch: 2.0
+  cursor-move-lava:
+    - sound: "block.note_block.hat"
+      volume: 1.0
+      pitch: 1.5
+    - sound: "block.lava.pop"
+      volume: 0.8
+      pitch: 1.2
+  cursor-blocked:
+    sound: "entity.arrow.hit"
+    volume: 1.0
+    pitch: 2.0
+  minigame-start:
+    sound: "entity.experience_orb.pickup"
+    volume: 1.0
+    pitch: 2.0
+  success-water:
+    - sound: "item.bucket.empty"
+      volume: 1.0
+      pitch: 1.0
+    - sound: "entity.player.levelup"
+      volume: 1.0
+      pitch: 2.0
+  success-lava:
+    - sound: "item.bucket.empty_lava"
+      volume: 1.0
+      pitch: 1.0
+    - sound: "entity.player.levelup"
+      volume: 1.0
+      pitch: 2.0
