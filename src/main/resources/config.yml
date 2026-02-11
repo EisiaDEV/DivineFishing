@@ -7,6 +7,10 @@ messages:
   fishing-failed: "&a[ &e시스템 &a] &c낚시에 실패하였습니다."
 
 sounds:
+  cursor-move:
+    sound: "block.note_block.hat"
+    volume: 1.0
+    pitch: 2.0
   cursor-move-water:
     - sound: "block.note_block.hat"
       volume: 1.0

@@ -54,7 +54,7 @@ class FishingManager(private val plugin: FishingPlugin) {
 
         sessions[player.uniqueId] = session
 
-        if (efficiency >= 15) {
+        if (efficiency >= 18) {
             immediateSuccess(session)
         } else {
             startCountdown(session)
@@ -236,8 +236,6 @@ class FishingManager(private val plugin: FishingPlugin) {
         }
 
         session.player.clearTitle()
-
-        // 성공 파티클 효과
         spawnSuccessParticles(session)
 
         val event = FishingSuccessEvent(
@@ -252,10 +250,7 @@ class FishingManager(private val plugin: FishingPlugin) {
     fun failFishing(session: FishingSession, message: String) {
         session.cleanup()
         sessions.remove(session.player.uniqueId)
-        
-        // 실패 파티클 효과
         spawnFailParticles(session)
-        
         session.player.sendMessage(message)
     }
 
