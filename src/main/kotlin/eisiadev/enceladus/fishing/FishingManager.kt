@@ -14,29 +14,38 @@ import kotlin.random.Random
 
 class FishingManager(private val plugin: FishingPlugin) {
 
+    companion object {
+        private val EFFICIENCY_REGEX = """\[ 낚시 효율 \+(\d+) ]""".toRegex()
+    }
+
     private val sessions = mutableMapOf<UUID, FishingSession>()
+    private val soundCache = mutableMapOf<String, Sound?>()
+    private val componentCache = mutableMapOf<String, Component>()
 
     fun hasActiveSession(player: Player): Boolean {
         return sessions.containsKey(player.uniqueId)
     }
 
+    private fun getCachedSound(soundName: String): Sound? {
+        return soundCache.getOrPut(soundName) {
+            try {
+                Sound.valueOf(soundName.uppercase().replace(".", "_"))
+            } catch (e: Exception) {
+                plugin.logger.warning("Invalid sound: $soundName")
+                null
+            }
+        }
+    }
+
     private fun playSoundsFromConfig(player: Player, key: String) {
         val soundConfigs = plugin.configManager.getSoundConfigList(key)
         for (config in soundConfigs) {
-            val sound = config["sound"] as? String ?: continue
+            val soundName = config["sound"] as? String ?: continue
             val volume = (config["volume"] as? Double ?: 1.0).toFloat()
             val pitch = (config["pitch"] as? Double ?: 1.0).toFloat()
 
-            try {
-                player.playSound(
-                    player.location,
-                    Sound.valueOf(sound.uppercase().replace(".", "_")),
-                    volume,
-                    pitch
-                )
-            } catch (e: Exception) {
-                plugin.logger.warning("Invalid sound: $sound")
-            }
+            val sound = getCachedSound(soundName) ?: continue
+            player.playSound(player.location, sound, volume, pitch)
         }
     }
 
@@ -63,14 +72,13 @@ class FishingManager(private val plugin: FishingPlugin) {
 
     private fun extractEfficiency(rod: ItemStack): Int {
         val lore = rod.lore() ?: return 0
-        val regex = """\[ 낚시 효율 \+(\d+) ]""".toRegex()
 
         for (component in lore) {
             val plain = component?.let {
                 net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(it)
             } ?: continue
 
-            val match = regex.find(plain)
+            val match = EFFICIENCY_REGEX.find(plain)
             if (match != null) {
                 return match.groupValues[1].toIntOrNull() ?: 0
             }
@@ -160,22 +168,25 @@ class FishingManager(private val plugin: FishingPlugin) {
     }
 
     private fun buildMinigameBar(session: FishingSession): Component {
-        val builder = Component.text()
+        val cacheKey = "${session.barSize}-${session.cursorPosition}-${session.targetPosition}"
+        return componentCache.getOrPut(cacheKey) {
+            val builder = Component.text()
 
-        for (i in 0 until session.barSize) {
-            val bar = when (i) {
-                session.cursorPosition -> Component.text("▌", NamedTextColor.YELLOW)
-                session.targetPosition -> Component.text("▌", NamedTextColor.GREEN)
-                else -> Component.text("▌", NamedTextColor.GRAY)
+            for (i in 0 until session.barSize) {
+                val bar = when (i) {
+                    session.cursorPosition -> Component.text("▌", NamedTextColor.YELLOW)
+                    session.targetPosition -> Component.text("▌", NamedTextColor.GREEN)
+                    else -> Component.text("▌", NamedTextColor.GRAY)
+                }
+
+                if (i > 0) {
+                    builder.append(Component.space())
+                }
+                builder.append(bar)
             }
 
-            if (i > 0) {
-                builder.append(Component.space())
-            }
-            builder.append(bar)
+            builder.build()
         }
-
-        return builder.build()
     }
 
     fun moveCursor(player: Player, direction: Int, clickLocation: Location? = null) {
@@ -219,20 +230,12 @@ class FishingManager(private val plugin: FishingPlugin) {
 
         val soundConfigs = plugin.configManager.getSoundConfigList(soundKey)
         for (config in soundConfigs) {
-            val sound = config["sound"] as? String ?: continue
+            val soundName = config["sound"] as? String ?: continue
             val volume = (config["volume"] as? Double ?: 1.0).toFloat()
             val pitch = (config["pitch"] as? Double ?: 1.0).toFloat()
 
-            try {
-                session.player.playSound(
-                    session.player.location,
-                    Sound.valueOf(sound.uppercase().replace(".", "_")),
-                    volume,
-                    pitch
-                )
-            } catch (e: Exception) {
-                plugin.logger.warning("Invalid sound: $sound")
-            }
+            val sound = getCachedSound(soundName) ?: continue
+            session.player.playSound(session.player.location, sound, volume, pitch)
         }
 
         session.player.clearTitle()
@@ -262,29 +265,24 @@ class FishingManager(private val plugin: FishingPlugin) {
     fun endSession(player: Player) {
         val session = sessions.remove(player.uniqueId) ?: return
         session.cleanup()
+        componentCache.clear()
     }
 
     fun clearAllSessions() {
         sessions.values.forEach { it.cleanup() }
         sessions.clear()
+        componentCache.clear()
+        soundCache.clear()
     }
 
     private fun playSoundFromConfig(player: Player, key: String) {
         val config = plugin.configManager.getSoundConfig(key)
-        val sound = config["sound"] as? String ?: return
+        val soundName = config["sound"] as? String ?: return
         val volume = (config["volume"] as? Double ?: 1.0).toFloat()
         val pitch = (config["pitch"] as? Double ?: 1.0).toFloat()
 
-        try {
-            player.playSound(
-                player.location,
-                Sound.valueOf(sound.uppercase().replace(".", "_")),
-                volume,
-                pitch
-            )
-        } catch (e: Exception) {
-            plugin.logger.warning("Invalid sound: $sound")
-        }
+        val sound = getCachedSound(soundName) ?: return
+        player.playSound(player.location, sound, volume, pitch)
     }
 
     private fun spawnSuccessParticles(session: FishingSession) {
